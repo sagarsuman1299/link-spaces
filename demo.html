@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Link Spaces — live demo</title>
+<meta name="description" content="Try Link Spaces in your browser. One tab for all your tools.">
+<style>
+:root{
+  --ground:#f6f7f8; --surface:#fff; --surface-2:#eef1f2;
+  --ink:#15181c; --body:#4a5158; --muted:#98a0a8;
+  --rule:#e6e9ec; --accent:#0f6b57; --accent-soft:#e7f1ee;
+  --danger:#c0392b;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#121517; --surface:#1a1e21; --surface-2:#222729;
+    --ink:#eef1f3; --body:#bec5cb; --muted:#7c858d;
+    --rule:#2a3034; --accent:#3fa189; --accent-soft:#172b26;
+    --danger:#e06c5b;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--ground);color:var(--body);min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{width:100%;max-width:720px;margin:0 auto;padding:9vh 20px 48px}
+body[data-mode="panel"] .wrap{padding:14px 12px 24px;max-width:none}
+
+.panel{
+  border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  background:var(--surface);box-shadow:0 4px 24px rgba(0,0,0,.06);
+}
+body[data-mode="panel"] .panel{border-radius:9px;box-shadow:none}
+
+/* ---------- bar ---------- */
+.bar{
+  background:var(--ink);color:var(--ground);padding:14px 18px;
+  display:flex;align-items:center;gap:12px;
+}
+@media (prefers-color-scheme: dark){ .bar{background:#0d1012;color:#eef1f3} }
+.bar .sq{
+  width:34px;height:34px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.bar .txt{flex:1;min-width:0}
+.bar .t1{font-size:16px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .t2{font-size:11.5px;opacity:.62;margin-top:1px}
+.iconbtn{
+  width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.14);
+  border:0;color:inherit;font-size:14px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.iconbtn:hover{background:rgba(255,255,255,.24)}
+.pill{
+  background:var(--accent);color:#fff;border:0;padding:8px 14px;border-radius:20px;
+  font-size:12.5px;font-weight:700;cursor:pointer;flex-shrink:0;
+}
+.pill:hover{filter:brightness(1.1)}
+
+/* ---------- search ---------- */
+.searchwrap{padding:10px 14px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.search{
+  width:100%;border:1.4px solid var(--rule);border-radius:8px;padding:9px 12px;
+  font-size:13.5px;font-family:inherit;background:var(--surface-2);color:var(--ink);
+}
+.search:focus{outline:0;border-color:var(--accent);background:var(--surface)}
+.search::placeholder{color:var(--muted)}
+
+/* ---------- rows ---------- */
+.row{
+  display:flex;align-items:center;gap:12px;padding:12px 18px;width:100%;
+  border:0;border-bottom:1px solid var(--rule);background:none;
+  text-align:left;font:inherit;cursor:pointer;color:inherit;
+}
+.row:last-of-type{border-bottom:0}
+.row:hover,.row:focus-visible{background:var(--surface-2);outline:none}
+.row:focus-visible{box-shadow:inset 3px 0 0 var(--accent)}
+.row.dragging{opacity:.4}
+.row.dragover{box-shadow:inset 0 2px 0 var(--accent)}
+.row .sq{
+  width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:#fff;
+}
+.row .bul{width:7px;height:7px;border-radius:50%;background:var(--rule);flex-shrink:0;margin:0 11px}
+.row .lbl{flex:1;min-width:0}
+.row .l1{font-size:15px;font-weight:700;color:var(--ink);line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .l2{font-size:11.5px;color:var(--muted);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .count{font-size:12px;color:var(--muted);flex-shrink:0}
+.editbtn{
+  border:1.3px solid var(--rule);background:var(--surface);padding:6px 14px;
+  border-radius:7px;font-size:12.5px;font-weight:700;color:var(--body);
+  cursor:pointer;flex-shrink:0;font-family:inherit;
+}
+.editbtn:hover{border-color:var(--accent);color:var(--accent)}
+body[data-mode="panel"] .row .count{display:none}
+body[data-mode="panel"] .editbtn{padding:5px 10px}
+
+/* ---------- edit ---------- */
+.erow{display:flex;align-items:center;gap:8px;padding:8px 18px;border-bottom:1px solid var(--rule)}
+.erow.dragging{opacity:.4}
+.erow.dragover{box-shadow:inset 0 2px 0 var(--accent)}
+.grip{color:var(--muted);font-size:14px;cursor:grab;flex-shrink:0;user-select:none}
+.fld{
+  border:1.3px solid var(--rule);border-radius:7px;padding:8px 11px;font-size:13px;
+  background:var(--surface);color:var(--ink);font-family:inherit;min-width:0;
+}
+.fld.name{width:170px;font-weight:700;flex-shrink:0}
+.fld.url{flex:1}
+.fld:focus{outline:0;border-color:var(--accent)}
+.del{
+  width:28px;height:28px;border-radius:6px;background:var(--surface-2);border:0;
+  color:var(--muted);font-size:15px;cursor:pointer;flex-shrink:0;
+}
+.del:hover{color:var(--danger)}
+.addrow{
+  padding:12px 18px;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;
+  background:none;border:0;border-bottom:1px solid var(--rule);width:100%;
+  text-align:left;font-family:inherit;
+}
+.addrow:hover{background:var(--surface-2)}
+
+.swatches{display:flex;gap:7px;padding:12px 18px;border-bottom:1px solid var(--rule);flex-wrap:wrap;align-items:center}
+.swatches .lab{font-size:12px;color:var(--muted);margin-right:3px}
+.sw{width:22px;height:22px;border-radius:6px;border:2px solid transparent;cursor:pointer;padding:0}
+.sw.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset}
+
+.foot{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 18px;background:var(--surface-2);flex-wrap:wrap;
+}
+.note{font-size:11.5px;color:var(--muted)}
+.btns{display:flex;gap:7px;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:7px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;border:1.3px solid var(--rule)}
+.btn.ghost{background:var(--surface);color:var(--body)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.danger{background:var(--surface);color:var(--danger);border-color:var(--rule)}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- preset picker ---------- */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;padding:16px 18px}
+body[data-mode="panel"] .presets{grid-template-columns:1fr 1fr}
+.pcard{
+  display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.3px solid var(--rule);
+  border-radius:9px;background:var(--surface);cursor:pointer;text-align:left;
+  font-family:inherit;min-height:56px;
+}
+.pcard:hover{border-color:var(--accent)}
+.pcard .sq{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.pcard .pn{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.2}
+.pcard .pc{font-size:11px;color:var(--muted)}
+
+.empty{padding:34px 20px;text-align:center;color:var(--muted);font-size:13.5px}
+.hint{margin-top:18px;text-align:center;font-size:12px;color:var(--muted)}
+body[data-mode="panel"] .hint{font-size:11px;margin-top:12px}
+kbd{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;
+  background:var(--surface-2);border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;color:var(--body);
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- name + form rows ---------- */
+.namerow,.formrow{padding:11px 18px;border-bottom:1px solid var(--rule)}
+.namerow{display:flex;align-items:center;gap:10px}
+.namerow .lab{font-size:12px;color:var(--muted);width:52px;flex-shrink:0}
+.fld.spacename{flex:1;font-weight:700;font-size:14px}
+.formrow .flab{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.fld.wide{width:100%}
+.formrow .fhint{font-size:11.5px;color:var(--muted);margin-top:5px}
+
+/* ---------- inline confirm ---------- */
+.confirmbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:12px 18px;background:var(--accent-soft);border-bottom:1px solid var(--rule);
+}
+.confirmbar .ctext{font-size:13px;font-weight:700;color:var(--ink)}
+.btn.confirmdel{background:var(--danger);border-color:var(--danger);color:#fff}
+[hidden]{display:none!important}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:var(--ground);padding:10px 18px;border-radius:9px;
+  font-size:12.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.28);
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:88vw;z-index:50;
+}
+@media (prefers-color-scheme: dark){#toast{background:#000;color:#eef1f3}}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+
+.demobar{max-width:720px;margin:0 auto 16px;padding:13px 18px;border-radius:10px;
+  background:var(--accent-soft);border:1px solid var(--accent);color:var(--ink);font-size:13px;line-height:1.55}
+.demobar b{font-weight:700}
+.demobar a{color:var(--accent);font-weight:700}
+#toast{word-break:break-all;font-weight:500;max-width:90vw}
+
+</style></head><body data-mode="tab">
+<div class="demobar"><b>This is a live demo — nothing to install.</b> Click a space, then a link.
+Links show where they'd go instead of navigating away. Try <b>Edit</b>, the <b>search box</b>,
+and <b>+ Add space</b>. Changes reset when you reload.<br><br>
+The real extension does the same thing on every new tab, and remembers everything.</div>
+<main class="wrap"><div class="panel" id="panel"></div><p class="hint" id="hint"></p></main>
+<script>window.chrome={storage:{local:{_d:{},get(def,cb){const o={};for(const k in def)o[k]=(k in this._d)?this._d[k]:def[k];cb(o);},set(v){Object.assign(this._d,v);}},onChanged:{addListener(){}}},tabs:{create(){}}};</script><script>/* Link Spaces — preset packs.
+   Plain public URLs. {store} style tokens are asked for once when the pack is added. */
+
+const PRESETS = [
+  {
+    name: "LinkedIn", color: "#0a66c2",
+    links: [
+      { name: "Inbox",         url: "https://www.linkedin.com/messaging/" },
+      { name: "Notifications", url: "https://www.linkedin.com/notifications/" },
+      { name: "My posts",      url: "https://www.linkedin.com/in/me/recent-activity/all/" },
+      { name: "My network",    url: "https://www.linkedin.com/mynetwork/" },
+      { name: "Saved items",   url: "https://www.linkedin.com/my-items/" },
+      { name: "Feed",          url: "https://www.linkedin.com/feed/" }
+    ]
+  },
+  {
+    name: "Shopify", color: "#5e8e3e",
+    vars: [{ key: "store", label: "Your Shopify store handle", hint: "the bit before .myshopify.com" }],
+    links: [
+      { name: "Orders",     url: "https://admin.shopify.com/store/{store}/orders" },
+      { name: "Products",   url: "https://admin.shopify.com/store/{store}/products" },
+      { name: "Customers",  url: "https://admin.shopify.com/store/{store}/customers" },
+      { name: "Analytics",  url: "https://admin.shopify.com/store/{store}/analytics/reports" },
+      { name: "Discounts",  url: "https://admin.shopify.com/store/{store}/discounts" },
+      { name: "Apps",       url: "https://admin.shopify.com/store/{store}/apps" },
+      { name: "Themes",     url: "https://admin.shopify.com/store/{store}/themes" },
+      { name: "Settings",   url: "https://admin.shopify.com/store/{store}/settings/general" }
+    ]
+  },
+  {
+    name: "Meta Ads", color: "#1877f2",
+    links: [
+      { name: "Ads Manager",    url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" },
+      { name: "Business Suite", url: "https://business.facebook.com/latest/home" },
+      { name: "Inbox",          url: "https://business.facebook.com/latest/inbox" },
+      { name: "Events Manager", url: "https://business.facebook.com/events_manager2" },
+      { name: "Ad Library",     url: "https://www.facebook.com/ads/library/" },
+      { name: "Billing",        url: "https://business.facebook.com/billing_hub/accounts" }
+    ]
+  },
+  {
+    name: "Instagram", color: "#c13584",
+    links: [
+      { name: "Inbox",    url: "https://www.instagram.com/direct/inbox/" },
+      { name: "Profile",  url: "https://www.instagram.com/" },
+      { name: "Explore",  url: "https://www.instagram.com/explore/" },
+      { name: "Insights", url: "https://business.facebook.com/latest/insights/overview" }
+    ]
+  },
+  {
+    name: "Pinterest", color: "#e60023",
+    links: [
+      { name: "Home",       url: "https://www.pinterest.com/" },
+      { name: "Business hub", url: "https://www.pinterest.com/business/hub/" },
+      { name: "Analytics",  url: "https://www.pinterest.com/business/analytics/overview/" },
+      { name: "Create pin", url: "https://www.pinterest.com/pin-builder/" }
+    ]
+  },
+  {
+    name: "Amazon Seller", color: "#f6a800",
+    vars: [{ key: "tld", label: "Your marketplace domain", hint: "amazon.in, amazon.com, amazon.co.uk …", def: "amazon.in" }],
+    links: [
+      { name: "Seller Central", url: "https://sellercentral.{tld}/home" },
+      { name: "Orders",         url: "https://sellercentral.{tld}/orders-v3" },
+      { name: "Inventory",      url: "https://sellercentral.{tld}/inventory" },
+      { name: "Account health", url: "https://sellercentral.{tld}/performance/dashboard" },
+      { name: "Advertising",    url: "https://advertising.{tld}/cm/campaigns" },
+      { name: "Payments",       url: "https://sellercentral.{tld}/payments/dashboard" }
+    ]
+  },
+  {
+    name: "GoDaddy", color: "#1a1a1a",
+    links: [
+      { name: "My products", url: "https://account.godaddy.com/products" },
+      { name: "Domains",     url: "https://dcc.godaddy.com/control/portfolio" },
+      { name: "Email",       url: "https://email.godaddy.com/" }
+    ]
+  },
+  {
+    name: "Gmail", color: "#d93025",
+    links: [
+      { name: "Inbox",   url: "https://mail.google.com/mail/u/0/#inbox" },
+      { name: "Starred", url: "https://mail.google.com/mail/u/0/#starred" },
+      { name: "Sent",    url: "https://mail.google.com/mail/u/0/#sent" },
+      { name: "Drafts",  url: "https://mail.google.com/mail/u/0/#drafts" }
+    ]
+  },
+  {
+    name: "Google Analytics", color: "#e8710a",
+    links: [
+      { name: "Reports",   url: "https://analytics.google.com/analytics/web/" },
+      { name: "Realtime",  url: "https://analytics.google.com/analytics/web/#/realtime" }
+    ]
+  },
+  {
+    name: "Search Console", color: "#4285f4",
+    links: [
+      { name: "Overview",    url: "https://search.google.com/search-console" },
+      { name: "Performance", url: "https://search.google.com/search-console/performance/search-analytics" },
+      { name: "Indexing",    url: "https://search.google.com/search-console/index" }
+    ]
+  },
+  {
+    name: "Google Drive", color: "#0f9d58",
+    links: [
+      { name: "My Drive",       url: "https://drive.google.com/drive/my-drive" },
+      { name: "Recent",         url: "https://drive.google.com/drive/recent" },
+      { name: "Shared with me", url: "https://drive.google.com/drive/shared-with-me" }
+    ]
+  },
+  {
+    name: "Calendar", color: "#1a73e8",
+    links: [
+      { name: "This week", url: "https://calendar.google.com/calendar/r/week" },
+      { name: "Today",     url: "https://calendar.google.com/calendar/r/day" },
+      { name: "Month",     url: "https://calendar.google.com/calendar/r/month" }
+    ]
+  },
+  {
+    name: "YouTube Studio", color: "#ff0000",
+    links: [
+      { name: "Dashboard", url: "https://studio.youtube.com/" },
+      { name: "Content",   url: "https://studio.youtube.com/channel/UC/videos/upload" },
+      { name: "Analytics", url: "https://studio.youtube.com/channel/UC/analytics" },
+      { name: "Comments",  url: "https://studio.youtube.com/channel/UC/comments" }
+    ]
+  },
+  {
+    name: "X", color: "#0f1419",
+    links: [
+      { name: "Home",          url: "https://x.com/home" },
+      { name: "Notifications", url: "https://x.com/notifications" },
+      { name: "Messages",      url: "https://x.com/messages" },
+      { name: "New post",      url: "https://x.com/compose/post" }
+    ]
+  },
+  {
+    name: "GitHub", color: "#24292f",
+    links: [
+      { name: "Notifications", url: "https://github.com/notifications" },
+      { name: "Pull requests", url: "https://github.com/pulls" },
+      { name: "Issues",        url: "https://github.com/issues" },
+      { name: "Repositories",  url: "https://github.com/" }
+    ]
+  },
+  {
+    name: "Canva", color: "#7d2ae8",
+    links: [
+      { name: "Projects", url: "https://www.canva.com/projects" },
+      { name: "Home",     url: "https://www.canva.com/" },
+      { name: "Brand kit", url: "https://www.canva.com/brand/settings" }
+    ]
+  },
+  {
+    name: "Stripe", color: "#635bff",
+    links: [
+      { name: "Payments",  url: "https://dashboard.stripe.com/payments" },
+      { name: "Balance",   url: "https://dashboard.stripe.com/balance" },
+      { name: "Customers", url: "https://dashboard.stripe.com/customers" }
+    ]
+  },
+  {
+    name: "Razorpay", color: "#3395ff",
+    links: [
+      { name: "Dashboard",   url: "https://dashboard.razorpay.com/app/dashboard" },
+      { name: "Payments",    url: "https://dashboard.razorpay.com/app/payments" },
+      { name: "Settlements", url: "https://dashboard.razorpay.com/app/settlements" }
+    ]
+  },
+  {
+    name: "Blank space", color: "#0f6b57", blank: true, links: []
+  }
+];
+</script><script>/* Link Spaces — grouped link launcher.
+   No tracking, no network calls, no page or browsing data is read.
+   Everything lives in chrome.storage.local on this machine. */
+
+const PALETTE = ["#0a66c2","#5e8e3e","#1877f2","#c13584","#e60023","#f6a800",
+                 "#1a1a1a","#0f6b57","#7d3cff","#d35400","#00897b","#546e7a"];
+
+const MODE = document.body.dataset.mode || "tab";
+const panel = document.getElementById("panel");
+const hint  = document.getElementById("hint");
+
+let spaces = [];
+let view   = { name: "home", spaceId: null };
+let query  = "";
+
+/* ---------------- helpers ---------------- */
+const uid    = () => "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const mark   = n  => (n || "?").trim().slice(0, 2);
+const esc    = s  => String(s == null ? "" : s);
+
+function pretty(u) {
+  try {
+    const x = new URL(u);
+    return (x.hostname + x.pathname + x.hash).replace(/^www\./, "").replace(/\/$/, "");
+  } catch { return u; }
+}
+function normal(u) {
+  const s = (u || "").trim();
+  if (!s) return "";
+  return /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : "https://" + s;
+}
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+function sq(name, color, cls) {
+  const n = el("div", cls || "sq", mark(name));
+  n.style.background = color || "#0f6b57";
+  return n;
+}
+
+/* small in-page message — never window.alert, which extensions block */
+let toastTimer = null;
+function toast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) { t = el("div"); t.id = "toast"; document.body.append(t); }
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* ---------------- storage ---------------- */
+function load() {
+  return new Promise(res => {
+    chrome.storage.local.get({ spaces: null }, d => {
+      spaces = Array.isArray(d.spaces) ? d.spaces : seed();
+      res();
+    });
+  });
+}
+function save() { chrome.storage.local.set({ spaces }); }
+
+function seed() {
+  // first run: a few of the common ones, so the page is never empty
+  return ["LinkedIn", "Gmail", "Calendar"].map(n => {
+    const p = PRESETS.find(x => x.name === n);
+    return { id: uid(), name: p.name, color: p.color, links: p.links.map(l => ({ ...l })) };
+  });
+}
+
+/* ---------------- shell ---------------- */
+function bar(o) {
+  const b = el("div", "bar");
+  if (o.back) {
+    const k = el("button", "iconbtn", "←");
+    k.title = "Back";
+    k.onclick = o.back;
+    b.append(k);
+  }
+  if (o.color) b.append(sq(o.title, o.color));
+  const t = el("div", "txt");
+  t.append(el("div", "t1", o.title), el("div", "t2", o.sub));
+  b.append(t);
+  (o.right || []).forEach(n => b.append(n));
+  return b;
+}
+
+function render() {
+  panel.replaceChildren();
+  if (view.name === "home")        renderHome();
+  else if (view.name === "group")  renderGroup();
+  else if (view.name === "edit")   renderEdit();
+  else if (view.name === "picker") renderPicker();
+  else if (view.name === "form")   renderForm();
+}
+
+/* ---------------- home ---------------- */
+function renderHome() {
+  const add = el("button", "pill", "+ Add space");
+  add.onclick = () => { view = { name: "picker" }; render(); };
+
+  panel.append(bar({
+    title: "Link Spaces",
+    sub: spaces.length + (spaces.length === 1 ? " space" : " spaces"),
+    color: "#0f6b57",
+    right: [add]
+  }));
+
+  // search
+  const sw = el("div", "searchwrap");
+  const input = el("input", "search");
+  input.type = "search";
+  input.placeholder = "Search every link…";
+  input.value = query;
+  input.oninput = () => { query = input.value; repaintBody(); };
+  input.onkeydown = e => {
+    if (e.key === "Escape") { query = ""; input.value = ""; repaintBody(); }
+    if (e.key === "Enter") {
+      const first = body.querySelector(".row[data-url]");
+      if (first) go(first.dataset.url, e.shiftKey);
+    }
+  };
+  sw.append(input);
+  panel.append(sw);
+
+  const body = el("div");
+  panel.append(body);
+
+  function repaintBody() {
+    body.replaceChildren();
+    const q = query.trim().toLowerCase();
+
+    if (q) {
+      const hits = [];
+      spaces.forEach(s => (s.links || []).forEach(l => {
+        const hay = (l.name + " " + l.url + " " + s.name).toLowerCase();
+        if (hay.includes(q)) hits.push({ s, l });
+      }));
+      if (!hits.length) {
+        body.append(el("div", "empty", "Nothing matches “" + query + "”"));
+        return;
+      }
+      hits.slice(0, 40).forEach(({ s, l }) => {
+        const r = el("button", "row");
+        r.dataset.url = l.url;
+        const lbl = el("div", "lbl");
+        lbl.append(el("div", "l1", l.name || pretty(l.url)),
+                   el("div", "l2", s.name + " · " + pretty(l.url)));
+        r.append(sq(s.name, s.color), lbl);
+        r.onclick = e => go(l.url, e.shiftKey);
+        body.append(r);
+      });
+      return;
+    }
+
+    if (!spaces.length) {
+      body.append(el("div", "empty", "No spaces yet. Add one to get started."));
+      return;
+    }
+
+    spaces.forEach((s, i) => {
+      const r = el("button", "row");
+      r.draggable = true;
+      r.dataset.index = i;
+
+      const lbl = el("div", "lbl");
+      lbl.append(el("div", "l1", s.name));
+      r.append(sq(s.name, s.color), lbl,
+               el("div", "count", (s.links || []).length + " links"));
+
+      const e = el("button", "editbtn", "✎ Edit");
+      e.onclick = ev => { ev.stopPropagation(); view = { name: "edit", spaceId: s.id }; render(); };
+      r.append(e);
+
+      r.onclick = () => { view = { name: "group", spaceId: s.id }; render(); };
+      wireDrag(r, body, spaces, () => { save(); repaintBody(); });
+      body.append(r);
+    });
+
+    body.append(footHome());
+  }
+
+  repaintBody();
+  if (MODE === "tab") setTimeout(() => input.focus(), 30);
+  hint.innerHTML = 'Click a name to open it · <kbd>Shift</kbd>+click opens in a new tab · right-click any page to send it here';
+}
+
+function footHome() {
+  const f = el("div", "foot");
+  f.append(el("div", "note", "Stored in this browser only. Nothing is uploaded."));
+  const b = el("div", "btns");
+
+  const exp = el("button", "btn ghost", "Export");
+  exp.onclick = doExport;
+
+  const imp = el("button", "btn ghost", "Import");
+  imp.onclick = doImport;
+
+  b.append(exp, imp);
+  f.append(b);
+  return f;
+}
+
+/* ---------------- group ---------------- */
+function renderGroup() {
+  const s = spaces.find(x => x.id === view.spaceId);
+  if (!s) { view = { name: "home" }; return render(); }
+
+  const e = el("button", "editbtn", "✎ Edit");
+  e.onclick = () => { view = { name: "edit", spaceId: s.id }; render(); };
+
+  panel.append(bar({
+    title: s.name,
+    sub: (s.links || []).length + ((s.links || []).length === 1 ? " link" : " links"),
+    color: s.color,
+    right: [e],
+    back: () => { view = { name: "home" }; render(); }
+  }));
+
+  if (!(s.links || []).length) {
+    panel.append(el("div", "empty", "No links here yet. Click Edit to add some."));
+  }
+
+  (s.links || []).forEach(l => {
+    const r = el("button", "row");
+    r.dataset.url = l.url;
+    const lbl = el("div", "lbl");
+    lbl.append(el("div", "l1", l.name || pretty(l.url)), el("div", "l2", pretty(l.url)));
+    r.append(el("span", "bul"), lbl);
+    r.onclick = ev => go(l.url, ev.shiftKey);
+    panel.append(r);
+  });
+
+  hint.innerHTML = 'Opens in this tab · <kbd>Shift</kbd>+click for a new tab';
+}
+
+/* ---------------- edit ---------------- */
+function renderEdit() {
+  const s = spaces.find(x => x.id === view.spaceId);
+  if (!s) { view = { name: "home" }; return render(); }
+
+  const draft = (s.links || []).map(l => ({ ...l }));
+  let color = s.color;
+
+  panel.append(bar({
+    title: s.name,
+    sub: "Editing",
+    color: s.color,
+    back: () => { view = { name: "group", spaceId: s.id }; render(); }
+  }));
+
+  // name
+  const nwrap = el("div", "namerow");
+  nwrap.append(el("span", "lab", "Name"));
+  const nameInput = el("input", "fld spacename");
+  nameInput.value = esc(s.name);
+  nameInput.placeholder = "Space name";
+  nameInput.maxLength = 60;
+  nwrap.append(nameInput);
+  panel.append(nwrap);
+
+  // colour picker
+  const swrap = el("div", "swatches");
+  swrap.append(el("span", "lab", "Colour"));
+  PALETTE.forEach(c => {
+    const b = el("button", "sw" + (c === color ? " on" : ""));
+    b.style.background = c;
+    b.title = c;
+    b.onclick = () => {
+      color = c;
+      [...swrap.querySelectorAll(".sw")].forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+    };
+    swrap.append(b);
+  });
+  panel.append(swrap);
+
+  const list = el("div");
+  function paint() {
+    list.replaceChildren();
+    draft.forEach((l, i) => {
+      const r = el("div", "erow");
+      r.draggable = true;
+      r.dataset.index = i;
+      r.append(el("span", "grip", "⠿"));
+
+      const n = el("input", "fld name");
+      n.value = esc(l.name); n.placeholder = "Name this link";
+      n.oninput = () => { draft[i].name = n.value; };
+
+      const u = el("input", "fld url");
+      u.value = esc(l.url); u.placeholder = "Paste a URL";
+      u.oninput = () => { draft[i].url = u.value; };
+
+      const d = el("button", "del", "×");
+      d.title = "Remove";
+      d.onclick = () => { draft.splice(i, 1); paint(); };
+
+      r.append(n, u, d);
+      wireDrag(r, list, draft, paint);
+      list.append(r);
+    });
+  }
+  paint();
+  panel.append(list);
+
+  const addLink = el("button", "addrow", "+  Add link");
+  addLink.onclick = () => {
+    draft.push({ name: "", url: "" });
+    paint();
+    const inputs = list.querySelectorAll(".fld.name");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  };
+  panel.append(addLink);
+
+  // inline delete confirmation — no window.confirm
+  const confirmBar = el("div", "confirmbar");
+  confirmBar.hidden = true;
+  confirmBar.append(el("span", "ctext", "Delete this space and all its links?"));
+  const cNo = el("button", "btn ghost", "Keep it");
+  const cYes = el("button", "btn confirmdel", "Delete");
+  cNo.onclick = () => { confirmBar.hidden = true; };
+  cYes.onclick = () => {
+    spaces = spaces.filter(x => x.id !== s.id);
+    save();
+    view = { name: "home" };
+    render();
+    toast("Deleted “" + s.name + "”");
+  };
+  const cBtns = el("div", "btns");
+  cBtns.append(cNo, cYes);
+  confirmBar.append(cBtns);
+  panel.append(confirmBar);
+
+  const f = el("div", "foot");
+  f.append(el("div", "note", "Nothing leaves your computer."));
+  const btns = el("div", "btns");
+
+  const del = el("button", "btn danger", "Delete space");
+  del.onclick = () => { confirmBar.hidden = false; };
+
+  const done = el("button", "btn solid", "Done");
+  done.onclick = () => {
+    const nm = nameInput.value.trim();
+    if (!nm) { nameInput.focus(); toast("Give the space a name"); return; }
+    s.name = nm;
+    s.color = color;
+    s.links = draft
+      .map(l => ({ name: (l.name || "").trim(), url: normal(l.url) }))
+      .filter(l => l.url);
+    save();
+    view = { name: "group", spaceId: s.id };
+    render();
+    toast("Saved");
+  };
+
+  btns.append(del, done);
+  f.append(btns);
+  panel.append(f);
+
+  hint.textContent = "Edit the name above. Drag the handle to reorder. A link with no URL is dropped.";
+}
+
+/* ---------------- preset picker ---------------- */
+function renderPicker() {
+  panel.append(bar({
+    title: "Add a space",
+    sub: "Pick one and its links come filled in",
+    back: () => { view = { name: "home" }; render(); }
+  }));
+
+  const grid = el("div", "presets");
+  PRESETS.forEach(p => {
+    const c = el("button", "pcard");
+    const t = el("div");
+    t.append(el("div", "pn", p.name),
+             el("div", "pc", p.blank ? "start empty" : p.links.length + " links"));
+    c.append(sq(p.name, p.color), t);
+    c.onclick = () => {
+      if (p.blank || (p.vars && p.vars.length)) { view = { name: "form", preset: p }; render(); }
+      else addPreset(p, {}, p.name);
+    };
+    grid.append(c);
+  });
+  panel.append(grid);
+
+  hint.textContent = "Everything is editable afterwards.";
+}
+
+/* ---------------- preset form (replaces prompt()) ---------------- */
+function renderForm() {
+  const p = view.preset;
+
+  panel.append(bar({
+    title: p.name,
+    sub: p.blank ? "Name your space" : "One detail needed",
+    color: p.color,
+    back: () => { view = { name: "picker" }; render(); }
+  }));
+
+  const fields = [];
+
+  if (p.blank) {
+    const w = el("div", "namerow");
+    w.append(el("span", "lab", "Name"));
+    const i = el("input", "fld spacename");
+    i.placeholder = "e.g. Client work";
+    i.maxLength = 60;
+    w.append(i);
+    panel.append(w);
+    fields.push({ key: "__name", input: i, required: true });
+  }
+
+  (p.vars || []).forEach(v => {
+    const w = el("div", "formrow");
+    w.append(el("div", "flab", v.label));
+    const i = el("input", "fld wide");
+    i.value = v.def || "";
+    i.placeholder = v.hint || "";
+    w.append(i);
+    if (v.hint) w.append(el("div", "fhint", v.hint));
+    panel.append(w);
+    fields.push({ key: v.key, input: i, def: v.def });
+  });
+
+  const f = el("div", "foot");
+  f.append(el("div", "note", p.blank ? "You can add links next." : "Used to build the URLs. Editable later."));
+  const btns = el("div", "btns");
+
+  const cancel = el("button", "btn ghost", "Cancel");
+  cancel.onclick = () => { view = { name: "picker" }; render(); };
+
+  const go2 = el("button", "btn solid", "Add space");
+  go2.onclick = () => {
+    const vals = {};
+    let name = p.name;
+    for (const fl of fields) {
+      const val = fl.input.value.trim();
+      if (fl.key === "__name") {
+        if (!val) { fl.input.focus(); toast("Give the space a name"); return; }
+        name = val;
+      } else {
+        vals[fl.key] = val || fl.def || "";
+      }
+    }
+    addPreset(p, vals, name);
+  };
+
+  btns.append(cancel, go2);
+  f.append(btns);
+  panel.append(f);
+
+  setTimeout(() => { const first = panel.querySelector("input.fld"); if (first) first.focus(); }, 30);
+  hint.textContent = "";
+}
+
+function addPreset(p, vals, name) {
+  vals = vals || {};
+  name = name || p.name;
+
+  const links = p.links.map(l => {
+    let url = l.url;
+    Object.keys(vals).forEach(k => { url = url.split("{" + k + "}").join(vals[k]); });
+    return { name: l.name, url };
+  });
+
+  const s = {
+    id: uid(),
+    name,
+    color: p.blank ? PALETTE[spaces.length % PALETTE.length] : p.color,
+    links
+  };
+  spaces.push(s);
+  save();
+  view = p.blank || !links.length ? { name: "edit", spaceId: s.id } : { name: "group", spaceId: s.id };
+  render();
+  toast("Added “" + name + "”");
+}
+
+/* ---------------- drag to reorder ---------------- */
+function wireDrag(node, container, arr, after) {
+  node.addEventListener("dragstart", e => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", node.dataset.index);
+    node.classList.add("dragging");
+  });
+  node.addEventListener("dragend", () => {
+    node.classList.remove("dragging");
+    [...container.children].forEach(c => c.classList.remove("dragover"));
+  });
+  node.addEventListener("dragover", e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    node.classList.add("dragover");
+  });
+  node.addEventListener("dragleave", () => node.classList.remove("dragover"));
+  node.addEventListener("drop", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    node.classList.remove("dragover");
+    const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+    const to   = parseInt(node.dataset.index, 10);
+    if (Number.isNaN(from) || Number.isNaN(to) || from === to) return;
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    after();
+  });
+}
+
+/* ---------------- navigation ---------------- */
+function go(url, newTab) {
+  if (!url) return;
+  if (newTab || MODE === "panel") {
+    chrome.tabs
+      ? chrome.tabs.create({ url })
+      : window.open(url, "_blank", "noopener");
+  } else {
+    window.location.href = url;
+  }
+}
+
+/* ---------------- export / import ---------------- */
+function doExport() {
+  const blob = new Blob([JSON.stringify({ version: 1, spaces }, null, 2)],
+                        { type: "application/json" });
+  const a = el("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "link-spaces.json";
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function doImport() {
+  const inp = el("input");
+  inp.type = "file";
+  inp.accept = "application/json,.json";
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(String(r.result));
+        const incoming = Array.isArray(data) ? data : data.spaces;
+        if (!Array.isArray(incoming)) throw new Error("no spaces in that file");
+        const clean = incoming
+          .filter(s => s && s.name)
+          .map(s => ({
+            id: uid(),
+            name: String(s.name).slice(0, 60),
+            color: /^#[0-9a-f]{6}$/i.test(s.color || "") ? s.color : PALETTE[0],
+            links: (Array.isArray(s.links) ? s.links : [])
+              .filter(l => l && l.url)
+              .map(l => ({ name: String(l.name || "").slice(0, 80), url: normal(l.url) }))
+          }));
+        if (!clean.length) throw new Error("that file had no usable spaces");
+        spaces = spaces.concat(clean);
+        save();
+        render();
+        toast("Added " + clean.length + " space" + (clean.length === 1 ? "" : "s"));
+      } catch (err) {
+        toast("Couldn't read that file — " + err.message);
+      }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+/* ---------------- keys ---------------- */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && view.name !== "home") {
+    view = view.name === "edit" && view.spaceId
+      ? { name: "group", spaceId: view.spaceId }
+      : { name: "home" };
+    render();
+  }
+});
+
+/* keep views in sync when the context menu adds a link */
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.spaces) {
+    spaces = changes.spaces.newValue || [];
+    if (view.name !== "edit") render();   // never clobber an open editor
+  }
+});
+
+load().then(render);
+</script><script>window.go=function(u,n){if(!u)return;toast((n?'Would open in a new tab → ':'Would open here → ')+u);};</script>
+</body></html>
